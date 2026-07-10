@@ -1,0 +1,14 @@
+# Generated output — regenerable from source/
+/build/
+__pycache__/
+*.pyc
+
+# Local secrets — never commit
+SECRETS.local.md
+*.local.md
+
+# Internal KCI source material (vendor docs contain the DB password) — kept local only
+**/source-material/
+
+# Raw ArcGIS JSON exports — bulky inputs kept local; build.py skips if absent
+**/json-export/

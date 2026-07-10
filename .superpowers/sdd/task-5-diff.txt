@@ -1,0 +1,191 @@
+=== commits ===
+4d47e38 feat: build_site -- static documentation site with nav and search
+=== diffstat ===
+ tooling/build_site.py            | 139 +++++++++++++++++++++++++++++++++++++++
+ tooling/tests/test_build_site.py |  33 ++++++++++
+ 2 files changed, 172 insertions(+)
+=== diff ===
+diff --git a/tooling/build_site.py b/tooling/build_site.py
+new file mode 100644
+index 0000000..8d7cf79
+--- /dev/null
++++ b/tooling/build_site.py
+@@ -0,0 +1,139 @@
++"""Render source/apps/*/content/*.md into a self-contained static site with a
++landing page, per-app sidebar nav, and client-side search. Standard library only."""
++import glob
++import html
++import json
++import os
++import re
++import sys
++
++sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
++import md_to_html
++
++APP_TITLES = {
++    "gwss": "GWSS",
++    "weeds-invasives": "Weeds & Invasives Treatment",
++    "incoming-shipment-tracking": "Incoming Shipment Tracking",
++    "pq-inspection-tracking": "PQ Inspection Tracking",
++    "plant-pest-other": "Plant, Pest & Other",
++}
++DOC_TITLES = {
++    "knowledge-base": "Knowledge Base",
++    "requirements": "Requirements",
++    "technical-reference": "Technical Reference",
++}
++DOC_ORDER = ["knowledge-base", "requirements", "technical-reference"]
++
++
++def discover(source_root):
++    pages = []
++    for md_path in glob.glob(os.path.join(source_root, "apps", "*", "content", "*.md")):
++        doc = os.path.splitext(os.path.basename(md_path))[0]
++        if doc not in DOC_TITLES:
++            continue
++        slug = os.path.basename(os.path.dirname(os.path.dirname(md_path)))
++        pages.append({"app": slug, "app_title": APP_TITLES.get(slug, slug),
++                      "doc": doc, "doc_title": DOC_TITLES[doc], "md_path": md_path,
++                      "out_rel": "%s/%s.html" % (slug, doc)})
++    pages.sort(key=lambda p: (p["app_title"], DOC_ORDER.index(p["doc"])))
++    return pages
++
++
++def _plain_text(md):
++    text = re.sub(r"[#*`|>_-]+", " ", md)
++    return re.sub(r"\s+", " ", text).strip()
++
++
++def _page_html(page, pages, body):
++    apps = {}
++    for p in pages:
++        apps.setdefault(p["app"], (p["app_title"], []))[1].append(p)
++    sidebar = []
++    for slug, (title, plist) in sorted(apps.items(), key=lambda kv: kv[1][0]):
++        active = " class='active'" if slug == page["app"] else ""
++        sidebar.append("<li%s><span class='app'>%s</span><ul>" % (active, html.escape(title)))
++        for p in sorted(plist, key=lambda x: DOC_ORDER.index(x["doc"])):
++            rel = "../%s" % p["out_rel"]
++            cur = " class='cur'" if p is page else ""
++            sidebar.append("<li%s><a href='%s'>%s</a></li>" % (cur, rel, html.escape(p["doc_title"])))
++        sidebar.append("</ul></li>")
++    return _SHELL.format(title=html.escape("%s — %s" % (page["app_title"], page["doc_title"])),
++                         css=md_to_html.CSS, sidebar="".join(sidebar), body=body, home="../index.html",
++                         search="../search-index.json", root="..")
++
++
++def build(source_root, out_dir):
++    pages = discover(source_root)
++    written = []
++    os.makedirs(out_dir, exist_ok=True)
++    search = []
++    for page in pages:
++        with open(page["md_path"], encoding="utf-8") as fh:
++            md = fh.read()
++        body = md_to_html.md_to_html_body(md)
++        out_path = os.path.join(out_dir, *page["out_rel"].split("/"))
++        os.makedirs(os.path.dirname(out_path), exist_ok=True)
++        with open(out_path, "w", encoding="utf-8") as fh:
++            fh.write(_page_html(page, pages, body))
++        written.append(out_path)
++        search.append({"title": "%s — %s" % (page["app_title"], page["doc_title"]),
++                       "url": page["out_rel"], "text": _plain_text(md)[:5000]})
++    # landing page
++    cards = []
++    apps = {}
++    for p in pages:
++        apps.setdefault(p["app"], (p["app_title"], []))[1].append(p)
++    for slug, (title, plist) in sorted(apps.items(), key=lambda kv: kv[1][0]):
++        links = " · ".join("<a href='%s'>%s</a>" % (p["out_rel"], html.escape(p["doc_title"]))
++                           for p in sorted(plist, key=lambda x: DOC_ORDER.index(x["doc"])))
++        cards.append("<div class='card'><h3>%s</h3><p>%s</p></div>" % (html.escape(title), links))
++    index_body = ("<h1>Solano County Ag — Solution Documentation</h1>"
++                  "<p>Select a solution and document below, or search.</p>"
++                  "<div class='cards'>%s</div>" % "".join(cards))
++    index_html = _SHELL.format(title="Solano County Ag Documentation", css=md_to_html.CSS,
++                               sidebar="", body=index_body, home="index.html",
++                               search="search-index.json", root=".")
++    with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as fh:
++        fh.write(index_html)
++    written.append(os.path.join(out_dir, "index.html"))
++    with open(os.path.join(out_dir, "search-index.json"), "w", encoding="utf-8") as fh:
++        json.dump(search, fh)
++    written.append(os.path.join(out_dir, "search-index.json"))
++    return written
++
++
++_SHELL = """<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'/>
++<meta name='viewport' content='width=device-width, initial-scale=1'/>
++<title>{title}</title><style>{css}
++body{{max-width:none;display:grid;grid-template-columns:280px 1fr;gap:0;padding:0}}
++nav.side{{background:#f4f7f1;border-right:1px solid #cdd8c4;padding:16px;height:100vh;overflow:auto;position:sticky;top:0}}
++nav.side a{{color:#2e5b1e;text-decoration:none}} nav.side .cur>a{{font-weight:700}}
++nav.side ul{{list-style:none;margin:4px 0 12px 8px;padding:0}} .app{{font-weight:700;color:#3d6b27}}
++main{{padding:24px 40px;max-width:8in}} .cards{{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}}
++.card{{border:1px solid #b9c4ae;border-radius:8px;padding:16px;background:#fff}}
++#q{{width:100%;padding:8px;margin-bottom:12px;border:1px solid #b9c4ae;border-radius:6px}}
++#results a{{display:block;padding:4px 0}}</style></head><body>
++<nav class='side'><a href='{home}'><strong>&#8962; Home</strong></a>
++<input id='q' placeholder='Search…'/><div id='results'></div><ul>{sidebar}</ul></nav>
++<main>{body}</main>
++<script>
++var ROOT="{root}";
++fetch("{search}").then(r=>r.json()).then(function(idx){{
++ var q=document.getElementById('q'),res=document.getElementById('results');
++ q.addEventListener('input',function(){{
++  var t=q.value.toLowerCase();res.innerHTML='';
++  if(t.length<3)return;
++  idx.filter(e=>e.text.toLowerCase().includes(t)||e.title.toLowerCase().includes(t))
++     .slice(0,10).forEach(function(e){{
++      var a=document.createElement('a');a.href=ROOT+'/'+e.url;a.textContent=e.title;res.appendChild(a);}});
++ }});}});
++</script></body></html>"""
++
++
++if __name__ == "__main__":
++    HERE = os.path.dirname(os.path.abspath(__file__))
++    REPO = os.path.dirname(HERE)
++    src = os.path.join(REPO, "source")
++    out = os.path.join(REPO, "build", "site")
++    written = build(src, out)
++    print("Wrote %d files to %s" % (len(written), out))
+diff --git a/tooling/tests/test_build_site.py b/tooling/tests/test_build_site.py
+new file mode 100644
+index 0000000..f5050bb
+--- /dev/null
++++ b/tooling/tests/test_build_site.py
+@@ -0,0 +1,33 @@
++import json, os, sys, tempfile, unittest
++sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
++import build_site as bs
++
++
++class TestBuildSite(unittest.TestCase):
++    def setUp(self):
++        self.root = tempfile.mkdtemp()
++        c = os.path.join(self.root, "source", "apps", "gwss", "content")
++        os.makedirs(c)
++        open(os.path.join(c, "knowledge-base.md"), "w", encoding="utf-8").write(
++            "# GWSS KB\n\n## Overview\n\nText about traps and findings.\n")
++        open(os.path.join(c, "requirements.md"), "w", encoding="utf-8").write(
++            "# GWSS Requirements\n\n## Background\n\nStuff.\n")
++        self.out = os.path.join(self.root, "build", "site")
++
++    def test_discover_finds_pages(self):
++        pages = bs.discover(os.path.join(self.root, "source"))
++        docs = sorted(p["doc"] for p in pages)
++        self.assertEqual(docs, ["knowledge-base", "requirements"])
++
++    def test_build_writes_index_pages_and_search_index(self):
++        written = bs.build(os.path.join(self.root, "source"), self.out)
++        self.assertTrue(os.path.exists(os.path.join(self.out, "index.html")))
++        self.assertTrue(os.path.exists(os.path.join(self.out, "gwss", "knowledge-base.html")))
++        idx = json.load(open(os.path.join(self.out, "search-index.json"), encoding="utf-8"))
++        self.assertTrue(any("traps" in e["text"].lower() for e in idx))
++        html = open(os.path.join(self.out, "index.html"), encoding="utf-8").read()
++        self.assertIn("GWSS", html)
++
++
++if __name__ == "__main__":
++    unittest.main()

@@ -1,0 +1,202 @@
+=== commits ===
+372e208 feat: generate_tech_reference -- factual tech-ref sections from JSON export
+=== diffstat ===
+ tooling/generate_tech_reference.py            | 127 ++++++++++++++++++++++++++
+ tooling/tests/test_generate_tech_reference.py |  56 ++++++++++++
+ 2 files changed, 183 insertions(+)
+=== diff ===
+diff --git a/tooling/generate_tech_reference.py b/tooling/generate_tech_reference.py
+new file mode 100644
+index 0000000..3aae088
+--- /dev/null
++++ b/tooling/generate_tech_reference.py
+@@ -0,0 +1,127 @@
++"""Generate the factual sections of an app's Technical Reference from its
++read-only ArcGIS JSON export, and inject them into technical-reference.md at
++<!-- GENERATED:<key> --> markers. Standard library only."""
++import glob
++import json
++import os
++import re
++import sys
++
++SKIP_FIELDS = {"objectid", "globalid", "shape", "shape_length", "shape_area",
++               "shape__area", "shape__length", "se_anno_cad_data"}
++
++
++def inject(md_text, sections):
++    for key, content in sections.items():
++        pattern = re.compile(
++            r"(<!-- GENERATED:%s -->)(.*?)(<!-- /GENERATED:%s -->)" % (re.escape(key), re.escape(key)),
++            re.S,
++        )
++        md_text = pattern.sub(lambda m: m.group(1) + "\n" + content.strip() + "\n" + m.group(3), md_text)
++    return md_text
++
++
++def load_export(export_dir):
++    manifest = json.load(open(os.path.join(export_dir, "_manifest.json"), encoding="utf-8"))
++    items = manifest.get("items", [])
++    layers = {}
++    for it in items:
++        item_dir = _find_item_dir(export_dir, it["id"])
++        if not item_dir:
++            continue
++        defs = []
++        for fp in sorted(glob.glob(os.path.join(item_dir, "layers", "*.json"))):
++            defs.append(json.load(open(fp, encoding="utf-8")))
++        if defs:
++            layers[it["id"]] = defs
++    return {"manifest": manifest, "items": items, "layers": layers}
++
++
++def _find_item_dir(export_dir, item_id):
++    hits = glob.glob(os.path.join(export_dir, item_id + "_*"))
++    return hits[0] if hits else None
++
++
++def _table(headers, rows):
++    out = ["| " + " | ".join(headers) + " |",
++           "|" + "|".join(["---"] * len(headers)) + "|"]
++    for r in rows:
++        out.append("| " + " | ".join("" if c is None else str(c) for c in r) + " |")
++    return "\n".join(out)
++
++
++def render_sections(export):
++    items = export["items"]
++    layers = export["layers"]
++
++    portal_rows = [(it.get("title"), it.get("type"), it.get("source"), it["id"]) for it in items]
++    portal = _table(["Title", "Type", "Source", "Item ID"], portal_rows)
++
++    svc_rows = []
++    for it in items:
++        if it["id"] in layers or "Service" in (it.get("type") or ""):
++            svc_rows.append((it.get("title"), it.get("type"), it["id"]))
++    services = _table(["Service / Item", "Type", "Item ID"], svc_rows) if svc_rows else "_No services._"
++
++    schema_parts, domain_map, subtype_parts, rel_rows = [], {}, [], []
++    for it in items:
++        for d in layers.get(it["id"], []):
++            schema_parts.append("#### %s (%s)\n" % (d.get("name"), d.get("type", "")))
++            frows = []
++            for f in (d.get("fields") or []):
++                if f.get("name", "").lower() in SKIP_FIELDS:
++                    continue
++                dom = f.get("domain") or {}
++                dom_name = dom.get("name", "")
++                if dom.get("codedValues"):
++                    domain_map[dom_name] = [cv.get("name") for cv in dom["codedValues"]]
++                frows.append((f.get("name"), f.get("alias"),
++                              (f.get("type", "") or "").replace("esriFieldType", ""),
++                              f.get("length", ""), f.get("nullable", ""),
++                              f.get("editable", ""), dom_name))
++            schema_parts.append(_table(
++                ["Field", "Alias", "Type", "Length", "Nullable", "Editable", "Domain"], frows))
++            schema_parts.append("")
++            for t in (d.get("types") or []):
++                subtype_parts.append("- **%s**: %s" % (d.get("name"), t.get("name")))
++            for r in (d.get("relationships") or []):
++                rel_rows.append((d.get("name"), r.get("name"), r.get("cardinality", "")))
++
++    schema = "\n".join(schema_parts) if schema_parts else "_No layers/tables._"
++    domains = "\n\n".join(
++        "**%s**: %s" % (k or "(unnamed)", ", ".join(str(v) for v in vals))
++        for k, vals in sorted(domain_map.items())) or "_No domains._"
++    subtypes = "\n".join(subtype_parts) if subtype_parts else "_No subtypes._"
++    relationships = _table(["Layer/Table", "Relationship", "Cardinality"], rel_rows) if rel_rows else "_No relationships._"
++
++    return {"portal-items": portal, "services": services, "schema": schema,
++            "domains": domains, "subtypes": subtypes, "relationships": relationships}
++
++
++REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++
++
++def _latest_export(slug):
++    base = os.path.join(REPO, "source", "apps", slug, "json-export")
++    subs = [d for d in glob.glob(os.path.join(base, "*")) if os.path.isdir(d)]
++    if not subs:
++        raise SystemExit("No json-export found for %s" % slug)
++    return sorted(subs)[-1]
++
++
++def main():
++    if len(sys.argv) < 2:
++        raise SystemExit("usage: generate_tech_reference.py <app-slug>")
++    slug = sys.argv[1]
++    export = load_export(_latest_export(slug))
++    sections = render_sections(export)
++    tr_path = os.path.join(REPO, "source", "apps", slug, "content", "technical-reference.md")
++    if not os.path.exists(tr_path):
++        raise SystemExit("Missing %s — author it from the template first." % tr_path)
++    text = open(tr_path, encoding="utf-8").read()
++    open(tr_path, "w", encoding="utf-8").write(inject(text, sections))
++    print("Injected generated sections into", tr_path)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/tooling/tests/test_generate_tech_reference.py b/tooling/tests/test_generate_tech_reference.py
+new file mode 100644
+index 0000000..2269253
+--- /dev/null
++++ b/tooling/tests/test_generate_tech_reference.py
+@@ -0,0 +1,56 @@
++import json, os, sys, unittest
++sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
++import generate_tech_reference as g
++
++
++class TestInject(unittest.TestCase):
++    def test_replaces_marked_region_and_keeps_markers(self):
++        md = "Intro\n<!-- GENERATED:schema -->\nOLD\n<!-- /GENERATED:schema -->\nOutro\n"
++        out = g.inject(md, {"schema": "NEW TABLE"})
++        self.assertIn("<!-- GENERATED:schema -->", out)
++        self.assertIn("<!-- /GENERATED:schema -->", out)
++        self.assertIn("NEW TABLE", out)
++        self.assertNotIn("OLD", out)
++        self.assertTrue(out.startswith("Intro"))
++        self.assertTrue(out.rstrip().endswith("Outro"))
++
++    def test_leaves_unmatched_sections_untouched(self):
++        md = "<!-- GENERATED:schema -->\nX\n<!-- /GENERATED:schema -->\n"
++        out = g.inject(md, {"domains": "Y"})
++        self.assertIn("X", out)
++
++
++class TestRender(unittest.TestCase):
++    def setUp(self):
++        import tempfile
++        self.dir = tempfile.mkdtemp()
++        exp = os.path.join(self.dir, "json_export_test")
++        os.makedirs(os.path.join(exp, "svc1_Demo_Service", "layers"))
++        json.dump({"portal": "https://p/", "items": [
++            {"id": "svc1", "title": "Demo Service", "type": "Feature Service", "source": "requested"}
++        ]}, open(os.path.join(exp, "_manifest.json"), "w"))
++        json.dump({"name": "Demo Layer", "type": "Feature Layer", "fields": [
++            {"name": "status", "alias": "Status", "type": "esriFieldTypeString", "length": 50,
++             "nullable": True, "editable": True,
++             "domain": {"type": "codedValue", "name": "d_status",
++                        "codedValues": [{"name": "Open"}, {"name": "Closed"}]}}
++        ], "relationships": [{"name": "Demo_Rel", "cardinality": "esriRelCardinalityOneToMany"}]},
++            open(os.path.join(exp, "svc1_Demo_Service", "layers", "0_Demo_Layer.json"), "w"))
++        self.export = g.load_export(exp)
++
++    def test_load_export_reads_items_and_layers(self):
++        self.assertEqual(len(self.export["items"]), 1)
++        self.assertIn("svc1", self.export["layers"])
++
++    def test_render_sections_has_all_keys_and_content(self):
++        s = g.render_sections(self.export)
++        for k in ("portal-items", "services", "schema", "domains", "subtypes", "relationships"):
++            self.assertIn(k, s)
++        self.assertIn("Demo Service", s["portal-items"])
++        self.assertIn("Status", s["schema"])
++        self.assertIn("Open", s["domains"])
++        self.assertIn("Demo_Rel", s["relationships"])
++
++
++if __name__ == "__main__":
++    unittest.main()

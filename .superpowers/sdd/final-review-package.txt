@@ -1,0 +1,300 @@
+=== root commit: de6e843e5505289e6ab9d958db1898fde63daf0c ===
+=== full history ===
+11569b6 chore: full build verified; remove legacy app folders
+d7a5f0d chore: add task-10-report.md
+049f095 fix: dedup relationship rows in generator; regen tech refs; note IST color label
+c59066c chore: add task-10b report
+e0dc16e docs: Incoming Shipment Tracking technical reference
+7bced18 docs: Weeds & Invasives technical reference
+ba18c27 docs: clarify export scope note in GWSS technical reference
+4acbdbf docs: GWSS technical reference (pilot)
+8569a71 feat: add document templates incl. technical-reference with generation markers
+479d012 feat: build.py orchestrator (generate -> site -> pdf)
+dab787e feat: build_pdf -- Edge headless HTML-to-PDF export
+f59961e refactor: context managers + preserve hyphens in build_site search text
+4d47e38 feat: build_site -- static documentation site with nav and search
+b4cdc2a refactor: close file handles via context managers in generate_tech_reference
+372e208 feat: generate_tech_reference -- factual tech-ref sections from JSON export
+c2ca0ec refactor: migrate finished apps into source/apps standardized layout
+0700ef3 chore: add read-only JSON extractor to tooling
+de6e843 chore: scaffold source/build/tooling repository structure
+=== whole-tree diffstat ===
+ .superpowers/sdd/progress.md                       |   27 +-
+ .superpowers/sdd/task-1-report.md                  |   48 +
+ .superpowers/sdd/task-10-diff.txt                  | 1197 +++++++++++++
+ .superpowers/sdd/task-10-report.md                 |   10 +
+ .superpowers/sdd/task-10a-report.md                |   22 +
+ .superpowers/sdd/task-10b-report.md                |   35 +
+ .superpowers/sdd/task-2-report.md                  |   28 +
+ .superpowers/sdd/task-3-report.md                  |   25 +
+ .superpowers/sdd/task-4-diff.txt                   |  202 +++
+ .superpowers/sdd/task-4-report.md                  |   53 +
+ .superpowers/sdd/task-5-diff.txt                   |  191 +++
+ .superpowers/sdd/task-5-report.md                  |   70 +
+ .superpowers/sdd/task-6-diff.txt                   |   95 +
+ .superpowers/sdd/task-6-report.md                  |   30 +
+ .superpowers/sdd/task-7-report.md                  |   41 +
+ .superpowers/sdd/task-8-report.md                  |   27 +
+ .superpowers/sdd/task-9-diff.txt                   | 1810 ++++++++++++++++++++
+ .superpowers/sdd/task-9-report.md                  |   45 +
+ .../apps/gwss/content/knowledge-base.html          |    2 +-
+ .../apps/gwss/content/knowledge-base.md            |    0
+ .../apps/gwss/content/requirements.html            |    2 +-
+ .../apps/gwss/content/requirements.md              |    0
+ source/apps/gwss/content/technical-reference.html  |  204 +++
+ source/apps/gwss/content/technical-reference.md    | 1746 +++++++++++++++++++
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_8_10_2023_TreatmentBuffer.json        |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_10_2_23_TreatmentBuffer.json          |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_GWSS_-_All_Finding_Records.json       |    0
+ .../layers/1_GWSS_-_All_Treatment_Records.json     |    0
+ .../layers/2_GWSS_-_All_Survey_Records.json        |    0
+ .../3_GWSS_Parcel_Survey_Last_Six_Weeks_Only.json  |    0
+ ...s_Tagged_from_GWSS_1_4_mi._Buffer_Analysis.json |    0
+ ..._GWSS_Treatments_-_Treatments_In_Past_Year.json |    0
+ ...Treatments_-_Most_Recent_Record_per_Parcel.json |    0
+ ...SS_Surveys_-_Most_Recent_Record_per_Parcel.json |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_Priority_Soil_Treatments_2025.json    |    0
+ .../jobs/j40b6d44bcf1c42d1be72079eadbac8db.json    |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_02022026_ParcelsWithin150m.json       |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_8_26_23_TreatmentBuffer.json          |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_150_Meter_Buffer_7_31_23.json         |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_2_8_24_Treatment_Buffer.json          |    0
+ .../jobs/j7e3353a65f1942ba96e833ffe48a55d0.json    |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_7_3_24_Treatment_Buffer.json          |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_Soil_Treatments_2025_corrected.json   |    0
+ .../jobs/j320bda89ca4344f48bb9030d038a380e.json    |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_GWSS_Trap_Grids.json                  |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../service.json                                   |    0
+ .../item.json                                      |    0
+ .../resources/info/root.json                       |    0
+ .../resources/sprites/sprite.json                  |    0
+ .../resources/sprites/sprite.png                   |    0
+ .../resources/sprites/sprite@2x.json               |    0
+ .../resources/sprites/sprite@2x.png                |    0
+ .../resources/styles/root.json                     |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_02022026_GWSSFinding_150m_Buffer.json |    0
+ .../service.json                                   |    0
+ .../json_export_20260630_134912/_manifest.json     |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_Address_Points.json                   |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_GWSS_Traps.json                       |    0
+ .../layers/1_GWSS_Findings.json                    |    0
+ .../layers/2_GWSS_Survey_Areas.json                |    0
+ .../layers/3_GWSS_Tracking.json                    |    0
+ .../layers/5_GWSS_Tracking_History.json            |    0
+ .../layers/6_GWSS_Surveys.json                     |    0
+ .../layers/8_GWSS_Treatment.json                   |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../resources/inConfig/6493640154520526.gif        |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_Biological_Control.json               |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_QuarBoundary.json                     |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_Buffer_of_Non_Viable_Eggmass_2.json   |    0
+ .../jobs/j83f2b2d150364e8cb8ca7c4f46ea3a2d.json    |    0
+ .../service.json                                   |    0
+ .../apps/gwss/notes}/source-material-notes.md      |    0
+ .../Development/GWSS GP Service.docx               |  Bin
+ .../Development/GWSS GP Workflow Functionality.pdf |  Bin
+ .../GWSS Inspection - High Level Requirements.docx |  Bin
+ .../Development/GWSS Workflow.pptx                 |  Bin
+ .../source-material}/Development/GWSS_Schema.docx  |  Bin
+ ...iteup - Updating Domain in Feature Service.docx |  Bin
+ ...iteup - Updating Domain in Feature Service.docx |  Bin
+ ...sri bug - Updating service domain - video 1.mp4 |  Bin
+ ...sri bug - Updating service domain - video 2.mp4 |  Bin
+ ...sitive Properties+ Adjacent Properties List.csv |    0
+ .../02 Confirmed GWSS Counts and Breakdown.xlsx    |  Bin
+ .../05 GWSS Survey Record Sheet Tracking Log.xlsx  |  Bin
+ .../Confirmed GWSS Counts and Breakdown.csv        |    0
+ .../From Matthew Carl/Data loading.docx            |  Bin
+ .../GWSS Pesticide & Survey Log.xlsx               |  Bin
+ ...SS Pesticide Treatments Scheduled 11-23-21.xlsx |  Bin
+ .../GWSS Treatment Log 11_19_21.xlsx               |  Bin
+ .../From Matthew Carl/Trap Routes.xlsx             |  Bin
+ .../From Matthew Carl/Treatment Project.docx       |  Bin
+ .../From Matthew Carl/Treatments on Nov 30.xlsx    |  Bin
+ .../gwss/source-material}/GWSS - User Guidance.pdf |  Bin
+ .../source-material}/GWSS - User Guidance.pptx     |  Bin
+ ...Maintenance Enhancement - Symbology Update.docx |  Bin
+ .../GWSS Technical Documentation KCI.docx          |  Bin
+ .../content/knowledge-base.html                    |    2 +-
+ .../content/knowledge-base.md                      |    0
+ .../content/requirements.html                      |    2 +-
+ .../content/requirements.md                        |    0
+ .../content/technical-reference.html               |  181 ++
+ .../content/technical-reference.md                 |  936 ++++++++++
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../resources/inConfig/7965037987676202.gif        |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/1_County_Boundary.json                  |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_Parcels_REGIS.json                    |    0
+ .../layers/1_Incoming_Shipment_Tracking.json       |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_GWSS_Trap_Grids.json                  |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_Inspector_View.json                   |    0
+ .../layers/10_Completed_-_Current_Fiscal_Year.json |    0
+ .../11_Completed_-_Previous_Fiscal_Year.json       |    0
+ .../12_Completed_-_Current_Calendar_Year.json      |    0
+ .../13_Completed_-_Previous_Calendar_Year.json     |    0
+ .../layers/14_Tracking_By_Period.json              |    0
+ .../layers/15_Completed_-_Previous_Month.json      |    0
+ .../layers/16_Released_by_Phone_-_Past_7_Days.json |    0
+ .../layers/1_Status.json                           |    0
+ .../layers/3_Incoming_Shipments.json               |    0
+ .../layers/4_Requires_Inspection.json              |    0
+ .../layers/5_Reinspection_Needed_-_On_Hold.json    |    0
+ .../layers/6_Complete.json                         |    0
+ .../layers/7_All_Records.json                      |    0
+ .../layers/8_Todays_Records.json                   |    0
+ .../layers/9_Completed_-_This_Month.json           |    0
+ .../service.json                                   |    0
+ .../item.json                                      |    0
+ .../resources/info/root.json                       |    0
+ .../resources/sprites/sprite.json                  |    0
+ .../resources/sprites/sprite.png                   |    0
+ .../resources/sprites/sprite@2x.json               |    0
+ .../resources/sprites/sprite@2x.png                |    0
+ .../resources/styles/root.json                     |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../json_export_20260701_153734/_manifest.json     |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_Parcels_REGIS.json                    |    0
+ .../layers/1_Incoming_Shipment_Tracking.json       |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../notes}/source-material-notes.md                |    0
+ ...Incoming Shipment Tracking - Whiteboarding.pptx |  Bin
+ .../IncomingShipmentTrackingInstorage - Copy.docx  |  Bin
+ .../source-material}/README.docx                   |  Bin
+ ...cking  - User Documentation OLD DO NOT USE.docx |  Bin
+ .../Technical Documentation/IST User Guide.docx    |  Bin
+ ...hipment Tracking - Technical Documentation.docx |  Bin
+ ...Shipment Tracking - Technical Documentation.pdf |  Bin
+ ...oming Shipment Tracking - Testing Document.docx |  Bin
+ .../Incoming Shipment Tracking - User Guide.pdf    |  Bin
+ .../weeds-invasives/content/knowledge-base.html    |    2 +-
+ .../apps/weeds-invasives/content/knowledge-base.md |    0
+ .../apps/weeds-invasives/content/requirements.html |    2 +-
+ .../apps/weeds-invasives/content/requirements.md   |    0
+ .../content/technical-reference.html               |   96 ++
+ .../weeds-invasives/content/technical-reference.md |  238 +++
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../item.json                                      |    0
+ .../resources/info/root.json                       |    0
+ .../resources/sprites/sprite.json                  |    0
+ .../resources/sprites/sprite.png                   |    0
+ .../resources/sprites/sprite@2x.json               |    0
+ .../resources/sprites/sprite@2x.png                |    0
+ .../resources/styles/root.json                     |    0
+ .../service.json                                   |    0
+ .../json_export_20260701_104733/_manifest.json     |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_WI_-_Treatment_Tracking.json          |    0
+ .../service.json                                   |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../data.json                                      |    0
+ .../item.json                                      |    0
+ .../layers/0_wi_treatmentpoints.json               |    0
+ .../layers/1_wi_r_treatment_areas.json             |    0
+ .../layers/2_wi_r_files.json                       |    0
+ .../service.json                                   |    0
+ .../notes}/source-material-notes.md                |    0
+ ...ent Application -  Technical Documentation.docx |  Bin
+ ...ment Application -  Technical Documentation.pdf |  Bin
+ ...Treatment Application - User Documentation.docx |  Bin
+ ... Treatment Application - User Documentation.pdf |  Bin
+ source/templates/knowledge-base.md                 |   44 +
+ source/templates/requirements.md                   |   33 +
+ source/templates/technical-reference.md            |   58 +
+ tooling/build.py                                   |   45 +
+ tooling/build_pdf.py                               |   58 +
+ tooling/build_site.py                              |  139 ++
+ tooling/extract_item_json.py                       |  495 ++++++
+ tooling/generate_tech_reference.py                 |  135 ++
+ tooling/tests/test_build_pdf.py                    |   18 +
+ tooling/tests/test_build_site.py                   |   33 +
+ tooling/tests/test_generate_tech_reference.py      |   75 +
+ 278 files changed, 8485 insertions(+), 17 deletions(-)
