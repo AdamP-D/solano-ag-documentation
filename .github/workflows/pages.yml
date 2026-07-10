@@ -1,0 +1,60 @@
+name: Deploy documentation site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment; cancel superseded runs.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # Windows runner so build_pdf.py can drive Microsoft Edge headless
+    # (Edge is preinstalled on windows-latest). The site build itself is
+    # pure standard-library Python.
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build site and PDFs
+        # Regenerates nothing extra (json-export is not in the repo, so the
+        # tech-ref generator is skipped); builds build/site and build/pdf and
+        # copies the PDFs into the site tree for the Download PDF buttons.
+        run: python tooling/build.py
+
+      - name: Disable Jekyll processing
+        run: New-Item -ItemType File -Path build/site/.nojekyll -Force
+        shell: pwsh
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
