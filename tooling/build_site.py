@@ -40,6 +40,7 @@ def discover(source_root):
 
 
 def _plain_text(md):
+    md = re.sub(r"<!--.*?-->", "", md, flags=re.S)  # drop HTML comment markers
     text = re.sub(r"[#*`|>_]+", " ", md)
     return re.sub(r"\s+", " ", text).strip()
 

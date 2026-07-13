@@ -246,7 +246,11 @@ def md_to_html_body(md, pdf_href=None):
     When ``pdf_href`` is given, a screen-only "Download PDF" button is added to
     the masthead (omitted for print/PDF output).
     """
-    lines = md.lstrip("﻿").splitlines()
+    # Strip HTML comments (e.g. the <!-- GENERATED:key --> injection markers)
+    # so they never surface as escaped, visible text. Non-greedy so each comment
+    # is removed individually and the content between paired markers is kept.
+    md = re.sub(r"<!--.*?-->", "", md.lstrip("﻿"), flags=re.S)
+    lines = md.splitlines()
 
     # Detect a leading H1 + optional italic subtitle -> masthead.
     j = 0

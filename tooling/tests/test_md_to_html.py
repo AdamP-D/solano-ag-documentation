@@ -43,5 +43,28 @@ class TestFencedCode(unittest.TestCase):
         self.assertIn("server", html)
 
 
+class TestHtmlComments(unittest.TestCase):
+    def test_generated_markers_are_suppressed_not_escaped(self):
+        md = ("# App — Technical Reference\n*subtitle*\n\n"
+              "## 4. Database Schema\n\n"
+              "<!-- GENERATED:schema -->\n"
+              "| Field | Type |\n|---|---|\n| a | String |\n"
+              "<!-- /GENERATED:schema -->\n")
+        html = m.md_to_html_body(md)
+        # marker must not appear raw or HTML-escaped
+        self.assertNotIn("GENERATED:schema", html)
+        self.assertNotIn("&lt;!--", html)
+        self.assertNotIn("<!--", html)
+        # the content between the markers must survive
+        self.assertIn("<table>", html)
+        self.assertIn("String", html)
+
+    def test_inline_and_multiline_comments_removed(self):
+        html = m.md_to_html_body("text before <!-- hidden --> text after\n")
+        self.assertNotIn("hidden", html)
+        self.assertIn("text before", html)
+        self.assertIn("text after", html)
+
+
 if __name__ == "__main__":
     unittest.main()
